@@ -5,3 +5,6 @@ class Expense(BaseModel):
     category: str
     amount: float
     date: str
+
+class AIQuery(BaseModel):
+    question: str

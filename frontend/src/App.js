@@ -8,7 +8,9 @@ function App() {
   const [showForm, setShowForm] = useState(false);
   const [newExpense, setNewExpense] = useState({ name: '', category: 'Food', amount: '', date: '' });
   const [loading, setLoading] = useState(true);
-
+  const [aiMessages, setAiMessages] = useState([]);
+const [aiQuestion, setAiQuestion] = useState('');
+const [aiLoading, setAiLoading] = useState(false);
   const budget = 30000;
   const totalSpent = expenses.reduce((sum, e) => sum + e.amount, 0);
   const budgetLeft = budget - totalSpent;
@@ -56,6 +58,18 @@ function App() {
       console.error("Error deleting expense", err);
     }
   };
+  const handleAIQuestion = async (question) => {
+  if (!question.trim()) return;
+  setAiLoading(true);
+  setAiQuestion('');
+  try {
+    const res = await axios.post(`${API}/ai/chat`, { question });
+    setAiMessages([...aiMessages, { question, answer: res.data.answer }]);
+  } catch (err) {
+    setAiMessages([...aiMessages, { question, answer: "Sorry, I couldn't process that. Try again!" }]);
+  }
+  setAiLoading(false);
+};
 
   return (
     <div className="min-h-screen p-6" style={{ backgroundColor: '#f8f7ff' }}>
@@ -204,19 +218,68 @@ function App() {
           </div>
 
           {/* AI Insight */}
-          <div className="rounded-2xl p-5 border" style={{ backgroundColor: '#f5f3ff', borderColor: '#ddd6fe' }}>
-            <div className="flex items-center gap-2 mb-2">
-              <div className="w-2 h-2 rounded-full" style={{ backgroundColor: '#7c3aed' }}></div>
-              <p className="text-xs uppercase tracking-widest font-medium" style={{ color: '#7c3aed' }}>AI Insight</p>
-            </div>
-            <p className="text-xs leading-relaxed" style={{ color: '#5b21b6' }}>
-              {totalSpent > 20000
-                ? `⚠️ You've spent ₹${totalSpent.toLocaleString()} — close to your budget! Try to cut down on expenses.`
-                : totalSpent > 0
-                ? `✅ Good job! You've spent ₹${totalSpent.toLocaleString()} and have ₹${budgetLeft.toLocaleString()} left.`
-                : `👋 Welcome! Start adding your expenses to get AI insights!`}
-            </p>
-          </div>
+          {/* AI Chat */}
+<div className="rounded-2xl p-5 border" style={{ backgroundColor: '#f5f3ff', borderColor: '#ddd6fe' }}>
+  <div className="flex items-center gap-2 mb-3">
+    <div className="w-2 h-2 rounded-full" style={{ backgroundColor: '#7c3aed' }}></div>
+    <p className="text-xs uppercase tracking-widest font-medium" style={{ color: '#7c3aed' }}>AI Assistant</p>
+  </div>
+
+  {/* Chat Messages */}
+  <div className="mb-3 max-h-40 overflow-y-auto">
+    {aiMessages.length === 0 ? (
+      <p className="text-xs" style={{ color: '#9b8fc0' }}>
+        Ask me anything about your expenses!
+      </p>
+    ) : (
+      aiMessages.map((msg, i) => (
+        <div key={i} className="mb-2">
+          <p className="text-xs font-medium mb-1" style={{ color: '#5b21b6' }}>
+            You: {msg.question}
+          </p>
+          <p className="text-xs leading-relaxed p-2 rounded-lg" style={{ backgroundColor: '#ede9fe', color: '#4c1d95' }}>
+            AI: {msg.answer}
+          </p>
+        </div>
+      ))
+    )}
+    {aiLoading && (
+      <p className="text-xs" style={{ color: '#9b8fc0' }}>AI is thinking...</p>
+    )}
+  </div>
+
+  {/* Quick Questions */}
+  <div className="flex flex-wrap gap-1 mb-3">
+    {[
+      'How much did I spend on food?',
+      'Am I over budget?',
+      'Where can I save money?'
+    ].map((q) => (
+      <button key={q} onClick={() => handleAIQuestion(q)}
+        className="text-xs px-2 py-1 rounded-lg"
+        style={{ backgroundColor: '#ede9fe', color: '#6d28d9' }}>
+        {q}
+      </button>
+    ))}
+  </div>
+
+  {/* Input */}
+  <div className="flex gap-2">
+    <input
+      className="flex-1 p-2 rounded-lg text-xs border outline-none"
+      style={{ borderColor: '#ddd6fe', color: '#2e1065' }}
+      placeholder="Ask about your expenses..."
+      value={aiQuestion}
+      onChange={(e) => setAiQuestion(e.target.value)}
+      onKeyPress={(e) => e.key === 'Enter' && handleAIQuestion(aiQuestion)}
+    />
+    <button onClick={() => handleAIQuestion(aiQuestion)}
+      className="px-3 py-2 rounded-lg text-xs text-white font-medium"
+      style={{ backgroundColor: '#5b21b6' }}>
+      Ask
+    </button>
+  </div>
+</div>
         </div>
       </div>
     </div>
