@@ -1,33 +1,60 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import axios from 'axios';
+
+const API = "http://127.0.0.1:8000";
 
 function App() {
-  const [expenses, setExpenses] = useState([
-    { id: 1, name: 'Zomato Order', category: 'Food', amount: 480, date: 'Today' },
-    { id: 2, name: 'Electricity Bill', category: 'Bills', amount: 1240, date: 'Yesterday' },
-    { id: 3, name: 'Uber Ride', category: 'Travel', amount: 220, date: 'Jun 12' },
-    { id: 4, name: 'Big Basket', category: 'Shopping', amount: 2100, date: 'Jun 11' },
-  ]);
-
+  const [expenses, setExpenses] = useState([]);
   const [showForm, setShowForm] = useState(false);
-  const [newExpense, setNewExpense] = useState({ name: '', category: 'Food', amount: '' });
+  const [newExpense, setNewExpense] = useState({ name: '', category: 'Food', amount: '', date: '' });
+  const [loading, setLoading] = useState(true);
 
-  const totalSpent = expenses.reduce((sum, e) => sum + e.amount, 0);
   const budget = 30000;
+  const totalSpent = expenses.reduce((sum, e) => sum + e.amount, 0);
   const budgetLeft = budget - totalSpent;
 
   const categoryIcons = { Food: '🍕', Bills: '⚡', Travel: '🚌', Shopping: '🛒' };
 
-  const handleAdd = () => {
+  // Load expenses from backend
+  useEffect(() => {
+    fetchExpenses();
+  }, []);
+
+  const fetchExpenses = async () => {
+    try {
+      const res = await axios.get(`${API}/expenses`);
+      setExpenses(res.data);
+      setLoading(false);
+    } catch (err) {
+      console.error("Error fetching expenses", err);
+      setLoading(false);
+    }
+  };
+
+  const handleAdd = async () => {
     if (!newExpense.name || !newExpense.amount) return;
-    setExpenses([...expenses, {
-      id: Date.now(),
-      name: newExpense.name,
-      category: newExpense.category,
-      amount: parseInt(newExpense.amount),
-      date: 'Today'
-    }]);
-    setNewExpense({ name: '', category: 'Food', amount: '' });
-    setShowForm(false);
+    try {
+      const res = await axios.post(`${API}/expenses`, {
+        name: newExpense.name,
+        category: newExpense.category,
+        amount: parseFloat(newExpense.amount),
+        date: new Date().toLocaleDateString('en-IN'),
+      });
+      setExpenses([...expenses, res.data]);
+      setNewExpense({ name: '', category: 'Food', amount: '' });
+      setShowForm(false);
+    } catch (err) {
+      console.error("Error adding expense", err);
+    }
+  };
+
+  const handleDelete = async (id) => {
+    try {
+      await axios.delete(`${API}/expenses/${id}`);
+      setExpenses(expenses.filter(e => e._id !== id));
+    } catch (err) {
+      console.error("Error deleting expense", err);
+    }
   };
 
   return (
@@ -72,22 +99,35 @@ function App() {
         <div className="bg-white rounded-2xl p-5 border" style={{ borderColor: '#ede9fe' }}>
           <p className="text-xs uppercase tracking-widest mb-4" style={{ color: '#9b8fc0' }}>Recent Expenses</p>
 
-          {expenses.map((expense) => (
-            <div key={expense.id} className="flex justify-between items-center py-3 border-b" style={{ borderColor: '#f5f3ff' }}>
-              <div className="flex items-center gap-3">
-                <div className="w-9 h-9 rounded-xl flex items-center justify-center text-base" style={{ backgroundColor: '#f5f3ff' }}>
-                  {categoryIcons[expense.category]}
+          {loading ? (
+            <p className="text-sm text-center py-4" style={{ color: '#9b8fc0' }}>Loading...</p>
+          ) : expenses.length === 0 ? (
+            <p className="text-sm text-center py-4" style={{ color: '#9b8fc0' }}>No expenses yet!</p>
+          ) : (
+            expenses.map((expense) => (
+              <div key={expense._id} className="flex justify-between items-center py-3 border-b" style={{ borderColor: '#f5f3ff' }}>
+                <div className="flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-xl flex items-center justify-center text-base" style={{ backgroundColor: '#f5f3ff' }}>
+                    {categoryIcons[expense.category] || '💰'}
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium" style={{ color: '#2e1065' }}>{expense.name}</p>
+                    <p className="text-xs" style={{ color: '#c4b5fd' }}>{expense.date}</p>
+                  </div>
                 </div>
-                <div>
-                  <p className="text-sm font-medium" style={{ color: '#2e1065' }}>{expense.name}</p>
-                  <p className="text-xs" style={{ color: '#c4b5fd' }}>{expense.date}</p>
+                <div className="flex items-center gap-3">
+                  <p className="text-sm font-medium" style={{ color: '#7c3aed' }}>- ₹{expense.amount}</p>
+                  <button onClick={() => handleDelete(expense._id)}
+                    className="text-xs px-2 py-1 rounded-lg"
+                    style={{ backgroundColor: '#fef2f2', color: '#ef4444' }}>
+                    ✕
+                  </button>
                 </div>
               </div>
-              <p className="text-sm font-medium" style={{ color: '#7c3aed' }}>- ₹{expense.amount}</p>
-            </div>
-          ))}
+            ))
+          )}
 
-          {/* Add Expense Form */}
+          {/* Add Form */}
           {showForm && (
             <div className="mt-4 p-4 rounded-xl border" style={{ backgroundColor: '#f5f3ff', borderColor: '#ddd6fe' }}>
               <input
@@ -142,28 +182,25 @@ function App() {
 
         {/* Right Side */}
         <div className="flex flex-col gap-4">
-
-          {/* Category Bars */}
           <div className="bg-white rounded-2xl p-5 border" style={{ borderColor: '#ede9fe' }}>
             <p className="text-xs uppercase tracking-widest mb-4" style={{ color: '#9b8fc0' }}>Spending by Category</p>
-            {[
-              { name: 'Food', amount: 8200, percent: 68 },
-              { name: 'Bills', amount: 6500, percent: 54 },
-              { name: 'Shopping', amount: 5780, percent: 48 },
-              { name: 'Travel', amount: 4100, percent: 34 },
-            ].map((cat) => (
-              <div key={cat.name} className="mb-3">
-                <div className="flex justify-between text-xs mb-1">
-                  <span style={{ color: '#4c1d95' }}>{cat.name}</span>
-                  <span className="font-medium" style={{ color: '#7c3aed' }}>₹{cat.amount.toLocaleString()}</span>
-                </div>
-                <div className="h-1.5 rounded-full" style={{ backgroundColor: '#f5f3ff' }}>
-                  <div className="h-1.5 rounded-full"
-                    style={{ width: `${cat.percent}%`, background: 'linear-gradient(90deg, #7c3aed, #a78bfa)' }}>
+            {['Food', 'Bills', 'Shopping', 'Travel'].map((cat) => {
+              const total = expenses.filter(e => e.category === cat).reduce((sum, e) => sum + e.amount, 0);
+              const percent = totalSpent > 0 ? (total / totalSpent) * 100 : 0;
+              return (
+                <div key={cat} className="mb-3">
+                  <div className="flex justify-between text-xs mb-1">
+                    <span style={{ color: '#4c1d95' }}>{cat}</span>
+                    <span className="font-medium" style={{ color: '#7c3aed' }}>₹{total.toLocaleString()}</span>
+                  </div>
+                  <div className="h-1.5 rounded-full" style={{ backgroundColor: '#f5f3ff' }}>
+                    <div className="h-1.5 rounded-full"
+                      style={{ width: `${percent}%`, background: 'linear-gradient(90deg, #7c3aed, #a78bfa)' }}>
+                    </div>
                   </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
 
           {/* AI Insight */}
@@ -173,10 +210,13 @@ function App() {
               <p className="text-xs uppercase tracking-widest font-medium" style={{ color: '#7c3aed' }}>AI Insight</p>
             </div>
             <p className="text-xs leading-relaxed" style={{ color: '#5b21b6' }}>
-              You spent 32% more on food this month compared to last month. Consider setting a food budget of ₹6,000 to save better!
+              {totalSpent > 20000
+                ? `⚠️ You've spent ₹${totalSpent.toLocaleString()} — close to your budget! Try to cut down on expenses.`
+                : totalSpent > 0
+                ? `✅ Good job! You've spent ₹${totalSpent.toLocaleString()} and have ₹${budgetLeft.toLocaleString()} left.`
+                : `👋 Welcome! Start adding your expenses to get AI insights!`}
             </p>
           </div>
-
         </div>
       </div>
     </div>
