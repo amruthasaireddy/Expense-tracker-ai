@@ -14,10 +14,17 @@ function App() {
   const [aiQuestion, setAiQuestion] = useState('');
   const [aiLoading, setAiLoading] = useState(false);
 
-  const budget = 30000;
+  const [budget, setBudget] = useState(30000);
+const [editBudget, setEditBudget] = useState(false);
+const [newBudget, setNewBudget] = useState('');
   const totalSpent = expenses.reduce((sum, e) => sum + e.amount, 0);
   const budgetLeft = budget - totalSpent;
-  const categoryIcons = { Food: '🍕', Bills: '⚡', Travel: '🚌', Shopping: '🛒' };
+  const categoryIcons = {
+  Food: '/food.png',
+  Bills: '/bill.png',
+  Travel: '/transportation.png',
+  Shopping: '/online-shopping.png'
+};
 
   useEffect(() => {
     fetchExpenses();
@@ -108,11 +115,36 @@ function App() {
               <p className="text-2xl font-medium">₹{totalSpent.toLocaleString()}</p>
               <p className="text-xs mt-1" style={{ color: '#ddd6fe' }}>This month</p>
             </div>
-            <div className="p-5 rounded-2xl bg-white border" style={{ borderColor: '#ede9fe' }}>
-              <p className="text-xs uppercase tracking-widest mb-2" style={{ color: '#9b8fc0' }}>Budget Left</p>
-              <p className="text-2xl font-medium" style={{ color: '#5b21b6' }}>₹{budgetLeft.toLocaleString()}</p>
-              <p className="text-xs mt-1" style={{ color: '#c4b5fd' }}>of ₹{budget.toLocaleString()}</p>
-            </div>
+             <div className="p-5 rounded-2xl bg-white border" style={{ borderColor: '#ede9fe' }}>
+  <p className="text-xs uppercase tracking-widest mb-2" style={{ color: '#9b8fc0' }}>Budget Left</p>
+  <p className="text-2xl font-medium" style={{ color: budgetLeft < 0 ? '#ef4444' : '#5b21b6' }}>
+    ₹{budgetLeft.toLocaleString()}
+  </p>
+  {editBudget ? (
+    <div className="flex gap-1 mt-2">
+      <input
+        type="number"
+        className="w-full p-1 rounded-lg text-xs border outline-none"
+        style={{ borderColor: '#ddd6fe', color: '#2e1065' }}
+        placeholder="Enter budget"
+        value={newBudget}
+        onChange={(e) => setNewBudget(e.target.value)}
+      />
+      <button
+        onClick={() => { setBudget(parseInt(newBudget)); setEditBudget(false); setNewBudget(''); }}
+        className="px-2 py-1 rounded-lg text-xs text-white"
+        style={{ backgroundColor: '#5b21b6' }}>
+        ✓
+      </button>
+    </div>
+  ) : (
+    <p className="text-xs mt-1 cursor-pointer"
+      style={{ color: '#c4b5fd' }}
+      onClick={() => setEditBudget(true)}>
+      of ₹{budget.toLocaleString()} ✏️
+    </p>
+  )}
+</div>
             <div className="p-5 rounded-2xl bg-white border" style={{ borderColor: '#ede9fe' }}>
               <p className="text-xs uppercase tracking-widest mb-2" style={{ color: '#9b8fc0' }}>Transactions</p>
               <p className="text-2xl font-medium" style={{ color: '#5b21b6' }}>{expenses.length}</p>
@@ -135,9 +167,13 @@ function App() {
                 expenses.map((expense) => (
                   <div key={expense._id} className="flex justify-between items-center py-3 border-b" style={{ borderColor: '#f5f3ff' }}>
                     <div className="flex items-center gap-3">
-                      <div className="w-9 h-9 rounded-xl flex items-center justify-center text-base" style={{ backgroundColor: '#f5f3ff' }}>
-                        {categoryIcons[expense.category] || '💰'}
-                      </div>
+                       <div className="w-9 h-9 rounded-xl flex items-center justify-center" style={{ backgroundColor: '#f5f3ff' }}>
+  <img
+    src={categoryIcons[expense.category] || '/food.png'}
+    alt={expense.category}
+    className="w-5 h-5"
+  />
+</div>
                       <div>
                         <p className="text-sm font-medium" style={{ color: '#2e1065' }}>{expense.name}</p>
                         <p className="text-xs" style={{ color: '#c4b5fd' }}>{expense.date}</p>
